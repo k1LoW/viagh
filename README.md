@@ -1,10 +1,10 @@
-# viagh
+# viagh [![build](https://github.com/k1LoW/viagh/actions/workflows/ci.yml/badge.svg)](https://github.com/k1LoW/viagh/actions/workflows/ci.yml)
 
 :octocat: `viagh.NewHTTPClient` returns a `*http.Client` that makes API requests via the `gh` command.
 
 ## Why viagh?
 
-When writing a GitHub CLI extension, the extension needs to exec the gh command internally to execute API requests with credentials.
+When writing a GitHub CLI extension, the extension needs to exec the `gh` command internally to execute API requests with credentials.
 
 By using `http.Client` that executes API requests via the `gh` command, you can use existing useful packages such as [go-github](https://github.com/google/go-github) without modification.
 
