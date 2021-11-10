@@ -1,6 +1,6 @@
 # viagh
 
-`viagh.NewHTTPClient` returns a `*http.Client` that makes API requests via the `gh` command.
+:octocat: `viagh.NewHTTPClient` returns a `*http.Client` that makes API requests via the `gh` command.
 
 ## Usage
 
@@ -12,7 +12,7 @@ import (
 	"fmt"
 
 	"github.com/google/go-github/v39/github"
-    "github.com/k1LoW/viagh"
+	"github.com/k1LoW/viagh"
 )
 
 func main() {
