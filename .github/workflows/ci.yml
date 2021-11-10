@@ -1,0 +1,41 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  job-test:
+    name: Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go_version: [1.17]
+    steps:
+      - name: Set up Go ${{ matrix.go_version }}
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go_version }}
+
+      - name: Check out source code
+        uses: actions/checkout@v2
+
+      - name: Setup gh
+        run: |
+          curl -L https://git.io/dpkg-i-from-url | bash -s -- https://github.com/cli/cli/releases/download/v2.2.0/gh_2.2.0_linux_amd64.deb
+          gh auth status
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run lint
+        uses: reviewdog/action-golangci-lint@v2
+
+      - name: Test
+        run: make ci
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Trivy vulnerability scanner in repo mode
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
