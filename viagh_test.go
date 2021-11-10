@@ -2,12 +2,24 @@ package viagh
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v39/github"
 )
+
+func Example() {
+	ctx := context.Background()
+	client, _ := NewHTTPClient()
+	gh := github.NewClient(client)
+
+	u, _, _ := gh.Users.Get(ctx, "k1LoW")
+	fmt.Println(u.GetLogin())
+	// Unordered output:
+	// k1LoW
+}
 
 func TestRequest(t *testing.T) {
 	ctx := context.Background()
