@@ -10,12 +10,17 @@ import (
 	"github.com/google/go-github/v39/github"
 )
 
+const (
+	testOwner = "k1LoW"
+	testRepo  = "viagh"
+)
+
 func Example() {
 	ctx := context.Background()
 	client, _ := NewHTTPClient()
 	gh := github.NewClient(client)
 
-	u, _, _ := gh.Users.Get(ctx, "k1LoW")
+	u, _, _ := gh.Users.Get(ctx, testOwner)
 	fmt.Println(u.GetLogin())
 	// Unordered output:
 	// k1LoW
@@ -31,12 +36,12 @@ func TestRequest(t *testing.T) {
 
 	{
 		// GET users/k1LoW/
-		u, _, err := gh.Users.Get(ctx, "k1LoW")
+		u, _, err := gh.Users.Get(ctx, testOwner)
 		if err != nil {
 			t.Fatal(err)
 		}
 		got := u.GetLogin()
-		if want := "k1LoW"; got != want {
+		if want := testOwner; got != want {
 			t.Errorf("got %v\nwant %v", got, want)
 		}
 	}
@@ -60,7 +65,21 @@ func TestRequest(t *testing.T) {
 	}
 
 	{
-		c, _, err := gh.Issues.CreateComment(ctx, "k1LoW", "viagh", 1, &github.IssueComment{
+		b, _, err := gh.Repositories.GetBranch(ctx, testOwner, testRepo, "main", false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tree, _, err := gh.Git.GetTree(ctx, testOwner, testRepo, b.GetCommit().GetSHA(), true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(tree.Entries) == 0 {
+			t.Error("invalid")
+		}
+	}
+
+	{
+		c, _, err := gh.Issues.CreateComment(ctx, testOwner, testRepo, 1, &github.IssueComment{
 			Body: github.String("Add comment via `gh`"),
 		})
 		if err != nil {
@@ -72,22 +91,22 @@ func TestRequest(t *testing.T) {
 			t.Errorf("got %v\nwant %v", got, want)
 		}
 
-		if _, err := gh.Issues.DeleteComment(ctx, "k1LoW", "viagh", c.GetID()); err != nil {
+		if _, err := gh.Issues.DeleteComment(ctx, testOwner, testRepo, c.GetID()); err != nil {
 			t.Fatal(err)
 		}
 
-		if _, _, err = gh.Issues.AddLabelsToIssue(ctx, "k1LoW", "viagh", 1, []string{"duplicate", "enhancement"}); err != nil {
+		if _, _, err = gh.Issues.AddLabelsToIssue(ctx, testOwner, testRepo, 1, []string{"duplicate", "enhancement"}); err != nil {
 			t.Fatal(err)
 		}
 
-		if _, err := gh.Issues.DeleteLabel(ctx, "k1LoW", "viagh", "duplicate"); err != nil {
+		if _, err := gh.Issues.DeleteLabel(ctx, testOwner, testRepo, "duplicate"); err != nil {
 			t.Fatal(err)
 		}
 
 	}
 
 	{
-		i, _, err := gh.Issues.Get(ctx, "k1LoW", "viagh", 1)
+		i, _, err := gh.Issues.Get(ctx, testOwner, testRepo, 1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -102,7 +121,7 @@ func TestRequest(t *testing.T) {
 		if diff := cmp.Diff(got, want, nil); diff != "" {
 			t.Errorf("%s", diff)
 		}
-		if _, err := gh.Issues.DeleteLabel(ctx, "k1LoW", "viagh", "enhancement"); err != nil {
+		if _, err := gh.Issues.DeleteLabel(ctx, testOwner, testRepo, "enhancement"); err != nil {
 			t.Fatal(err)
 		}
 	}
