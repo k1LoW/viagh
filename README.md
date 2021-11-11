@@ -1,4 +1,4 @@
-# viagh [![build](https://github.com/k1LoW/viagh/actions/workflows/ci.yml/badge.svg)](https://github.com/k1LoW/viagh/actions/workflows/ci.yml)
+# viagh [![build](https://github.com/k1LoW/viagh/actions/workflows/ci.yml/badge.svg)](https://github.com/k1LoW/viagh/actions/workflows/ci.yml) [![Go Reference](https://pkg.go.dev/badge/github.com/k1LoW/viagh.svg)](https://pkg.go.dev/github.com/k1LoW/viagh)
 
 :octocat: `viagh.NewHTTPClient` returns a `*http.Client` that makes API requests via the `gh` command.
 
