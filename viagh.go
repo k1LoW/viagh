@@ -30,17 +30,22 @@ func NewHTTPClient() (*http.Client, error) {
 
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
-			args    []string
 			stdin   string
 			page    int
 			perPage int
 			u       *url.URL
 		)
+
+		args := []string{"api", "-X", r.Method}
+		for k, v := range r.Header {
+			args = append(args, "-H", fmt.Sprintf("'%s:%s'", k, v[0]))
+		}
+
 		switch r.Method {
 		case http.MethodGet, http.MethodDelete:
 			page, perPage, u, err = parseURLAndSeparatePageAndPerPage(r.RequestURI)
 			ep := strings.TrimPrefix(u.RequestURI(), "/")
-			args = []string{"api", "-X", r.Method, ep}
+			args = append(args, ep)
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				return
@@ -50,7 +55,7 @@ func NewHTTPClient() (*http.Client, error) {
 			}
 		case http.MethodPost, http.MethodPatch:
 			ep := strings.TrimPrefix(r.RequestURI, "/")
-			args = []string{"api", "-X", r.Method, ep}
+			args = append(args, ep)
 			b := r.Body
 			defer func() { _ = b.Close() }()
 			buf := new(bytes.Buffer)
