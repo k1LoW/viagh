@@ -47,19 +47,19 @@ func TestRequest(t *testing.T) {
 	}
 
 	{
-		// GET search/repositories?page=1&per_page=10&q=specinfra&sort=created
+		// GET search/repositories?page=1&per_page=5&q=specinfra&sort=created
 		res, _, err := gh.Search.Repositories(ctx, "specinfra", &github.SearchOptions{
 			Sort: "created",
 			ListOptions: github.ListOptions{
 				Page:    1,
-				PerPage: 10,
+				PerPage: 5,
 			},
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 		got := len(res.Repositories)
-		if want := 10; got != want {
+		if want := 5; got != want {
 			t.Errorf("got %v\nwant %v", got, want)
 		}
 	}
@@ -143,6 +143,44 @@ func TestRequestError(t *testing.T) {
 		}
 		got := res.StatusCode
 		if want := 404; got != want {
+			t.Errorf("got %v\nwant %v", got, want)
+		}
+	}
+}
+
+func TestRequestWithPagination(t *testing.T) {
+	ctx := context.Background()
+	client, err := NewHTTPClient()
+	if err != nil {
+		t.Fatal(err)
+	}
+	gh := github.NewClient(client)
+
+	{
+		var got string
+		page := 1
+	L:
+		for {
+			tags, res, err := gh.Repositories.ListTags(ctx, "golang", "go", &github.ListOptions{
+				Page:    page,
+				PerPage: 100,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, t := range tags {
+				if t.GetName() == "go1" {
+					got = t.GetCommit().GetSHA()
+					break L
+				}
+			}
+			if res.NextPage == 0 {
+				break
+			}
+			page += 1
+		}
+
+		if want := "6174b5e21e73714c63061e66efdbe180e1c5491d"; got != want {
 			t.Errorf("got %v\nwant %v", got, want)
 		}
 	}

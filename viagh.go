@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -15,6 +16,8 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/migueleliasweb/go-github-mock/src/mock"
 )
+
+const defaultPerPage = 30
 
 var statusRe = regexp.MustCompile(`\(HTTP (\d\d\d)\)`)
 
@@ -26,12 +29,25 @@ func NewHTTPClient() (*http.Client, error) {
 	}
 
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var args []string
-		var stdin string
+		var (
+			args    []string
+			stdin   string
+			page    int
+			perPage int
+			u       *url.URL
+		)
 		switch r.Method {
 		case http.MethodGet, http.MethodDelete:
-			ep := strings.TrimPrefix(r.RequestURI, "/")
+			page, perPage, u, err = parseURLAndSeparatePageAndPerPage(r.RequestURI)
+			ep := strings.TrimPrefix(u.RequestURI(), "/")
 			args = []string{"api", "-X", r.Method, ep}
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			if page > 0 {
+				args = append(args, "--paginate")
+			}
 		case http.MethodPost, http.MethodPatch:
 			ep := strings.TrimPrefix(r.RequestURI, "/")
 			args = []string{"api", "-X", r.Method, ep}
@@ -88,7 +104,33 @@ func NewHTTPClient() (*http.Client, error) {
 			}
 			w.WriteHeader(s)
 		}
-		_, _ = w.Write(stdout.Bytes())
+
+		b := stdout.Bytes()
+		if page > 0 {
+			pages := bytes.Split(b, []byte("}][{"))
+			if len(pages) > 1 {
+				if page == 1 {
+					b = append(pages[0], []byte("}]")...)
+				} else if page == len(pages) {
+					b = append([]byte("[{"), pages[page-1]...)
+				} else {
+					b = append([]byte("[{"), pages[page-1]...)
+					b = append(b, []byte("}]")...)
+				}
+			}
+			// TODO: cache response
+			if page < len(pages) {
+				q := u.Query()
+				q.Del("page")
+				q.Del("per_page")
+				q.Add("page", strconv.Itoa(page+1))
+				q.Add("per_page", strconv.Itoa(perPage))
+				u.RawQuery = q.Encode()
+				w.Header().Set("link", fmt.Sprintf("<%s>; rel=\"next\"", u.RequestURI()))
+			}
+		}
+
+		_, _ = w.Write(b)
 	})
 
 	mockServer := httptest.NewServer(h)
@@ -101,4 +143,33 @@ func NewHTTPClient() (*http.Client, error) {
 	}
 
 	return c, nil
+}
+
+func parseURLAndSeparatePageAndPerPage(reqURI string) (int, int, *url.URL, error) {
+	var page, perPage int
+	u, err := url.Parse(reqURI)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+	q := u.Query()
+	sp, ok := q["page"]
+	if ok && len(sp) > 0 {
+		q.Del("page")
+		page, err = strconv.Atoi(sp[0])
+		if err != nil {
+			return 0, 0, nil, err
+		}
+		spp, ok := q["per_page"]
+		if ok && len(spp) > 0 {
+			perPage, err = strconv.Atoi(spp[0])
+			if err != nil {
+				return 0, 0, nil, err
+			}
+		}
+	}
+	u.RawQuery = q.Encode()
+	if page > 0 && perPage == 0 {
+		perPage = defaultPerPage
+	}
+	return page, perPage, u, nil
 }
